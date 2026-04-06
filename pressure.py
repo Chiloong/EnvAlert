@@ -1,5 +1,7 @@
-import requests, time
-from config import LAT, LON, API_KEY, BARK_KEY, PRESSURE_RATE_THRESHOLD, PRESSURE_STATE_FILE
+import requests
+import time
+from config import OPENWEATHER_URL, BARK_URL, LAT, LON, API_KEY, BARK_KEY
+from config import PRESSURE_STATE_FILE, PRESSURE_RATE_THRESHOLD
 
 def send_bark(msg):
     try:
@@ -11,9 +13,8 @@ def send_bark(msg):
         print("❌ Bark错误:", e)
 
 def get_pressure():
-    url = f"{OPENWEATHER_URL}?lat={LAT}&lon={LON}&appid={API_KEY}&units=metric"
     print("🌍 请求天气数据...")
-    data = requests.get(url, timeout=10).json()
+    data = requests.get(f"{OPENWEATHER_URL}?lat={LAT}&lon={LON}&appid={API_KEY}&units=metric", timeout=10).json()
     return data["main"]["pressure"]
 
 def read_last():
@@ -38,12 +39,13 @@ def check_pressure():
         current_t = time.time()
         print(f"🌡 当前气压: {current_p} hPa")
         last = read_last()
+        send_bark("✅气压模块运行成功（测试）")
         if last:
             last_p, last_t = last
             delta_p = current_p - last_p
-            delta_t = (current_t - last_t)/3600
+            delta_t = (current_t - last_t) / 3600
             if delta_t > 0:
-                rate = delta_p/delta_t
+                rate = delta_p / delta_t
                 print(f"📈 速率: {rate:.2f} hPa/h")
                 if abs(rate) > PRESSURE_RATE_THRESHOLD:
                     direction = "📉下降" if rate < 0 else "📈上升"
@@ -53,3 +55,4 @@ def check_pressure():
         save_current(current_p, current_t)
     except Exception as e:
         print("❌ Pressure Error:", e)
+        return 0

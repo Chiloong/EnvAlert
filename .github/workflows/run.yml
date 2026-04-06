@@ -1,14 +1,13 @@
-name: Pressure & Wind Monitor
+name: EnvAlert
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-
     env:
       API_KEY: ${{ secrets.API_KEY }}
       BARK_KEY: ${{ secrets.BARK_KEY }}

@@ -13,11 +13,14 @@ API_KEY = os.environ.get("API_KEY")
 BARK_KEY = os.environ.get("BARK_KEY")
 
 # ⚖️ 阈值
-PRESSURE_RATE_THRESHOLD = 1.0      # hPa/h
-WIND_SPEED_THRESHOLD = 2.5         # m/s
-GUST_THRESHOLD = 4.0               # m/s
-NE_MIN = 20                        # 东北风最小角度
-NE_MAX = 100                       # 东北风最大角度
+PRESSURE_RATE_THRESHOLD = 1.0
+WIND_SPEED_THRESHOLD = 2.5
+GUST_THRESHOLD = 4.0
+NE_MIN = 20
+NE_MAX = 100
+
+# 🔥 趋势阈值（新增）
+TREND_PRESSURE_ACCEL_THRESHOLD = 0.5
 
 # ⚙️ 状态文件
 PRESSURE_STATE_FILE = "pressure_state.txt"

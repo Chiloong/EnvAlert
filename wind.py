@@ -1,48 +1,25 @@
-import requests
 import os
-from config import OPENWEATHER_URL, LAT, LON, API_KEY, BARK_KEY, WIND_SPEED_THRESHOLD, GUST_THRESHOLD, NE_MIN, NE_MAX, WIND_STATE_FILE
 
-def send_bark(msg):
-    try:
-        requests.get(f"https://api.day.app/{BARK_KEY}/{msg}", timeout=10)
-    except:
-        pass
+OPENWEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
+AQI_URL = "https://api.openweathermap.org/data/2.5/air_pollution"
+BARK_URL = "https://api.day.app"
 
-def load_last_state():
-    if os.path.exists(WIND_STATE_FILE):
-        with open(WIND_STATE_FILE, "r") as f:
-            return f.read().strip()
-    return "OFF"
+LAT = 35.21
+LON = 113.29
 
-def save_state(state):
-    with open(WIND_STATE_FILE, "w") as f:
-        f.write(state)
+API_KEY = os.environ.get("API_KEY")
+BARK_KEY = os.environ.get("BARK_KEY")
 
-def check_wind():
-    try:
-        params = {"lat": LAT, "lon": LON, "appid": API_KEY, "units": "metric"}
-        data = requests.get(OPENWEATHER_URL, params=params, timeout=10).json()
+# 阈值
+PRESSURE_LOW = 990
+PRESSURE_RATE_THRESHOLD = 1.0
 
-        wind = data.get("wind", {})
-        speed = wind.get("speed", 0)
-        deg = wind.get("deg", -1)
-        gust = wind.get("gust", 0)
+WIND_SPEED_THRESHOLD = 2.5
+GUST_THRESHOLD = 4.0
+NE_MIN = 20
+NE_MAX = 100
 
-        speed_ok = speed >= WIND_SPEED_THRESHOLD or gust >= GUST_THRESHOLD
-        direction_ok = NE_MIN <= deg <= NE_MAX
+AQI_THRESHOLD = 4  # ⚠️ OpenWeather是1~5等级（非真实AQI）
 
-        state = "ON" if (speed_ok and direction_ok) else "OFF"
-        last = load_last_state()
-
-        if last == "OFF" and state == "ON":
-            send_bark(f"🏭东北风触发 风速:{speed} 风向:{deg}")
-
-        save_state(state)
-
-        print(f"🌬 风:{speed}m/s 方向:{deg}")
-
-        return speed, deg
-
-    except Exception as e:
-        print("❌ Wind Error:", e)
-        return 0, -1
+STATE_FILE = "fusion_state.txt"
+PRESSURE_FILE = "pressure_state.txt"

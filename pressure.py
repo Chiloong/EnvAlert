@@ -21,7 +21,8 @@ def save(p, t):
 def get_pressure_signals():
     now = time.time()
     p = get_pressure()
-    low = p < 1000  # ✅ 阈值更新为1000 hPa
+
+    low_trigger = p < PRESSURE_LOW
     rate_trigger = False
 
     last = read_last()
@@ -34,4 +35,5 @@ def get_pressure_signals():
                 rate_trigger = True
 
     save(p, now)
-    return low, rate_trigger, p
+    # ⚠️ 返回当前气压，方便 fusion.py 调试显示
+    return low_trigger, rate_trigger, p

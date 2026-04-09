@@ -1,5 +1,6 @@
 import os
 import requests
+import time
 from config import *
 from wind import get_wind
 from pressure import get_pressure_signals
@@ -21,19 +22,23 @@ def save_state(v):
     open(STATE_FILE, "w").write(str(v))
 
 def check_all():
-    wind_t = get_wind()
-    low_t, pressure_drop, curr_pressure = get_pressure_signals()
-    aqi_high, aqi_rise, aqi_val = get_aqi_signals()
+
+    # ----------------------
+    # 获取各类信号
+    # ----------------------
+    wind_t = get_wind()  # 风速/风向/阵风触发
+    low_t, pressure_drop, current_pressure = get_pressure_signals()  # 气压低/下降速率/当前气压
+    aqi_high, aqi_rise, aqi_value = get_aqi_signals()  # 高污染/快速上升/AQI数值
 
     last = read_state()
 
     # ======================
-    # 🧠 真实风险计数（不变）
+    # 🧠 真实风险
     # ======================
     real_count = sum([wind_t, low_t, pressure_drop, aqi_high])
 
     # ======================
-    # 🟡 趋势信号（新增）
+    # 🟡 趋势信号
     # ======================
     trend_flag = 1 if (aqi_rise or (pressure_drop and wind_t)) else 0
 
@@ -44,7 +49,7 @@ def check_all():
     # ======================
     if trend_flag == 1 and last == 0:
         if aqi_rise:
-            msg = f"⚠️AQI快速上升📈 当前{aqi_val}"
+            msg = f"⚠️AQI快速上升📈 当前{aqi_value}"
         elif pressure_drop and wind_t:
             msg = "⚠️气压下降+东北风🌬"
 
@@ -52,13 +57,14 @@ def check_all():
     # 🔴 原有报警逻辑（完全保留）
     # ======================
     elif real_count > last:
+
         if real_count == 1:
             if wind_t:
                 msg = "🚨EnvAlert🚨\n🏭发电厂↙️东北风💨触发\n⛔️关闭新风🟣颗粒过滤开大⬆️"
             elif low_t:
-                msg = f"🚨EnvAlert🚨\n✴️气压🌨️过低🥱 当前气压:{curr_pressure} hPa"
+                msg = f"🚨EnvAlert🚨\n✴️气压🌨️过低🥱 当前气压:{current_pressure} hPa"
             elif aqi_high:
-                msg = f"🚨EnvAlert🚨\n🟥高污染AQI{aqi_val}+😷"
+                msg = f"🚨EnvAlert🚨\n🟥高污染AQI{aqi_value}+😷"
 
         elif real_count == 2:
             msg = "1️⃣🟡气象预警🚨"
@@ -76,8 +82,20 @@ def check_all():
         elif last >= 2 and real_count == 1:
             msg = "🟢气象风险下降"
 
+    # ======================
+    # 发送推送
+    # ======================
     if msg:
         send(msg)
 
+    # ⚠️ 只记录真实状态
     save_state(real_count)
-    print(f"当前真实计数:{real_count} 上次:{last}")
+
+    # ======================
+    # 🔹 调试输出（完整状态）
+    # ======================
+    print(f"🌬 风速: {wind_t} 风向/阵风触发: {wind_t}")
+    print(f"📊 当前气压: {current_pressure} hPa  阈值: {PRESSURE_LOW} hPa")
+    print(f"⚠️ 气压低: {low_t}  气压下降速率触发: {pressure_drop}")
+    print(f"📈 AQI变化速率: {aqi_rise}  AQI: {aqi_value}  高污染: {aqi_high}  上升预警: {aqi_rise}")
+    print(f"当前真实计数: {real_count} 上次: {last}")

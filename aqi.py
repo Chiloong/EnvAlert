@@ -1,57 +1,24 @@
 import requests
-import time
-import os
 from config import *
-
-def load_last():
-    try:
-        with open(AQI_STATE_FILE, "r") as f:
-            aqi, t = f.read().split(",")
-            return float(aqi), float(t)
-    except:
-        return None
-
-def save(aqi, t):
-    with open(AQI_STATE_FILE, "w") as f:
-        f.write(f"{aqi},{t}")
+import time
 
 def get_aqi_signals():
     try:
         url = WAQI_URL.format(lat=LAT, lon=LON, token=WAQI_TOKEN)
-        data = requests.get(url, timeout=10).json()
-
-        if data.get("status") != "ok":
-            print("❌ AQI接口异常")
+        res = requests.get(url, timeout=10).json()
+        if res.get("status") != "ok":
             return False, False, 0
-
-        aqi = data["data"]["aqi"]
-        now = time.time()
-
-        last = load_last()
-
-        rise_trigger = False
-
-        if last:
-            last_aqi, last_t = last
-            dt = (now - last_t) / 3600
-
-            if dt > 0:
-                delta = aqi - last_aqi
-                rate = delta / dt
-
-                print(f"📈 AQI变化速率:{rate:.2f}/h")
-
-                if rate > AQI_DELTA_THRESHOLD:
-                    rise_trigger = True
-
-        save(aqi, now)
-
-        high_trigger = aqi >= AQI_THRESHOLD
-
-        print(f"🟥 AQI:{aqi} 高污染:{high_trigger} 上升预警:{rise_trigger}")
-
-        return high_trigger, rise_trigger, aqi
-
-    except Exception as e:
-        print("❌ AQI Error:", e)
+        aqi = res["data"]["aqi"]
+        last_aqi_file = "aqi_last.txt"
+        try:
+            last_aqi = int(open(last_aqi_file).read().strip())
+        except:
+            last_aqi = aqi
+        dt = 1  # 简化：假设每次运行间隔约1小时
+        aqi_rate = (aqi - last_aqi)/dt
+        rise_flag = aqi_rate > 10  # AQI快速上升阈值，可调
+        high_flag = aqi >= AQI_THRESHOLD
+        open(last_aqi_file, "w").write(str(aqi))
+        return high_flag, rise_flag, aqi
+    except:
         return False, False, 0

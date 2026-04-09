@@ -1,3 +1,4 @@
+# config.py
 import os
 
 # 🌍 数据源
@@ -17,26 +18,26 @@ API_KEY = os.environ.get("API_KEY")
 BARK_KEY = os.environ.get("BARK_KEY")
 
 # ======================
-# ⚖️ 阈值（原有）
+# ⚖️ 阈值
 # ======================
-PRESSURE_LOW = 1000
-PRESSURE_RATE_THRESHOLD = 1.0
+PRESSURE_LOW = 1000                  # 气压低于1000 hPa触发
+PRESSURE_RATE_THRESHOLD = 1.0        # 气压下降速率阈值
 
-WIND_SPEED_THRESHOLD = 2.5
-GUST_THRESHOLD = 4.0
-NE_MIN = 20
-NE_MAX = 100
+WIND_SPEED_THRESHOLD = 2.5           # 风速阈值
+GUST_THRESHOLD = 4.0                  # 阵风阈值
+NE_MIN = 20                           # 东北风最小角度
+NE_MAX = 100                          # 东北风最大角度
 
-AQI_THRESHOLD = 180  # 🟥 高污染阈值
+AQI_THRESHOLD = 180                   # 🟥 高污染AQI阈值
 
 # ======================
-# 📈 趋势预警（新增）
+# 📈 趋势预警
 # ======================
-AQI_DELTA_THRESHOLD = 15   # AQI每小时上涨≥15 → 提前预警
+AQI_DELTA_THRESHOLD = 15              # AQI每小时上涨≥15 → 提前预警
 
 # ======================
 # 📁 状态文件
 # ======================
 STATE_FILE = "fusion_state.txt"
 PRESSURE_FILE = "pressure_state.txt"
-AQI_STATE_FILE = "aqi_state.txt"   # 📈 AQI趋势用
+AQI_STATE_FILE = "aqi_state.txt"      # 📈 AQI趋势用

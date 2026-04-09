@@ -1,12 +1,14 @@
+```python
 import requests
 import time
+import os
 from config import BARK_KEY, TREND_PRESSURE_ACCEL_THRESHOLD, WIND_SPEED_THRESHOLD
 
 HEARTBEAT_FILE = "heartbeat.txt"
 EVENT_FILE = "last_event.txt"
+STATE_FILE = "fusion_state.txt"
 
-# ⏱ 心跳间隔（无事件多久才发）
-HEARTBEAT_INTERVAL = 43200   # 12小时
+HEARTBEAT_INTERVAL = 43200  # 12小时
 
 def send_bark(msg):
     try:
@@ -14,12 +16,19 @@ def send_bark(msg):
     except:
         pass
 
+def read_state():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, "r") as f:
+            return f.read().strip()
+    return "OFF"
+
+def save_state(s):
+    with open(STATE_FILE, "w") as f:
+        f.write(s)
+
 def record_event():
-    try:
-        with open(EVENT_FILE, "w") as f:
-            f.write(str(time.time()))
-    except:
-        pass
+    with open(EVENT_FILE, "w") as f:
+        f.write(str(time.time()))
 
 def read_last_event():
     try:
@@ -36,27 +45,18 @@ def read_last_heartbeat():
         return 0
 
 def save_heartbeat(t):
-    try:
-        with open(HEARTBEAT_FILE, "w") as f:
-            f.write(str(t))
-    except:
-        pass
+    with open(HEARTBEAT_FILE, "w") as f:
+        f.write(str(t))
 
 def smart_heartbeat():
-    try:
-        now = time.time()
-        last_event = read_last_event()
-        last_heartbeat = read_last_heartbeat()
+    now = time.time()
+    last_event = read_last_event()
+    last_heartbeat = read_last_heartbeat()
 
-        # 🧠 核心逻辑：
-        # 👉 长时间没有任何“异常事件”才发心跳
-        if (now - last_event > HEARTBEAT_INTERVAL) and (now - last_heartbeat > HEARTBEAT_INTERVAL):
-            send_bark("🟢EnvAlert正常运行（无异常）")
-            save_heartbeat(now)
-            print("🟢 智能心跳发送")
-
-    except Exception as e:
-        print("❌ 心跳错误:", e)
+    if (now - last_event > HEARTBEAT_INTERVAL) and (now - last_heartbeat > HEARTBEAT_INTERVAL):
+        send_bark("🟢EnvAlert正常运行（无异常）")
+        save_heartbeat(now)
+        print("🟢 心跳发送")
 
 def check_fusion(wind_data, pressure_data):
     print("🧠 趋势联动运行")
@@ -64,28 +64,22 @@ def check_fusion(wind_data, pressure_data):
     wind_speed, wind_deg = wind_data
     rate, accel = pressure_data
 
-    triggered = False
+    last_state = read_state()
+    current_state = "OFF"
 
-    # ⚡ 气压加速下降（核心预警）
-    if accel < -TREND_PRESSURE_ACCEL_THRESHOLD:
-        send_bark(f"⚡气压加速下降 {accel:.2f}")
-        triggered = True
+    # ⚡ 判断是否进入“异常状态”
+    if accel < -TREND_PRESSURE_ACCEL_THRESHOLD or wind_speed > WIND_SPEED_THRESHOLD:
+        current_state = "ON"
 
-    # 🌬 风增强
-    if wind_speed > WIND_SPEED_THRESHOLD:
-        send_bark(f"🌬风增强 {wind_speed:.1f}")
-        triggered = True
-
-    # 🚨 联动预警（重点）
-    if accel < -0.3 and wind_speed > WIND_SPEED_THRESHOLD:
-        send_bark("🚨环境恶化趋势（气压↓+风↑）")
-        triggered = True
-
-    # 🧠 如果有事件 → 记录时间（抑制心跳）
-    if triggered:
+    # ✅ 只在 OFF → ON 时触发（核心修复）
+    if last_state == "OFF" and current_state == "ON":
+        send_bark("🚨环境趋势异常触发")
         record_event()
 
-    # 🟢 智能心跳（仅在“长时间无事件”才触发）
+    save_state(current_state)
+
+    # 🟢 智能心跳
     smart_heartbeat()
 
     print("✅ 联动完成")
+```

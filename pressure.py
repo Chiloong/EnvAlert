@@ -6,9 +6,7 @@ def get_pressure():
     data = requests.get(OPENWEATHER_URL, params={
         "lat": LAT, "lon": LON, "appid": API_KEY, "units": "metric"
     }, timeout=10).json()
-    p = data["main"]["pressure"]
-    print(f"📊 当前气压: {p} hPa  阈值: {PRESSURE_LOW} hPa")
-    return p
+    return data["main"]["pressure"]
 
 def read_last():
     try:
@@ -24,6 +22,9 @@ def get_pressure_signals():
     now = time.time()
     p = get_pressure()
 
+    # 🔹 打印当前气压
+    print(f"📊 当前气压: {p} hPa  阈值: {PRESSURE_LOW} hPa")
+
     low = p < PRESSURE_LOW
     rate_trigger = False
 
@@ -33,9 +34,9 @@ def get_pressure_signals():
         dt = (now - lt)/3600
         if dt > 0:
             rate = (p - lp)/dt
-            print(f"📈 气压变化速率: {rate:.2f} hPa/h")
             if abs(rate) > PRESSURE_RATE_THRESHOLD:
                 rate_trigger = True
 
     save(p, now)
-    return low, rate_trigger
+    # 🔹 返回当前气压供fusion.py打印
+    return low, rate_trigger, p

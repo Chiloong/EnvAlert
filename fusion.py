@@ -25,15 +25,10 @@ def save_json(f, d):
 # ======================
 def should_run(risk):
     now = time.time()
-    hour = time.localtime(now).tm_hour
     last = read_json(RUN_STATE_FILE, {"t":0})["t"]
-
-    is_night = (hour >= 23 or hour < 7)
 
     if risk:
         interval = 300
-    elif is_night:
-        interval = 1800
     else:
         interval = 900
 
@@ -46,7 +41,7 @@ def should_run(risk):
 # ======================
 # 趋势
 # ======================
-def calc_trend(file, key, val, threshold):
+def calc_trend(file, val, threshold):
     now = time.time()
     last = read_json(file, {"v": val, "t": now})
 
@@ -55,8 +50,10 @@ def calc_trend(file, key, val, threshold):
 
     if dt > 0:
         rate = (val - last["v"]) / dt
-        if rate >= threshold:
-            flag = True
+        if threshold < 0:
+            flag = rate <= threshold
+        else:
+            flag = rate >= threshold
 
     save_json(file, {"v": val, "t": now})
     return flag
@@ -79,14 +76,14 @@ def check_all():
     humidity = h > HUMIDITY_THRESHOLD
     aqi_high = aqi >= AQI_THRESHOLD
 
-    pressure_drop = calc_trend(PRESSURE_FILE, "p", p, -PRESSURE_RATE_THRESHOLD)
-    aqi_rise = calc_trend(AQI_STATE_FILE, "a", aqi, AQI_DELTA_THRESHOLD)
+    pressure_drop = calc_trend(TREND_PRESSURE_FILE, p, -PRESSURE_RATE_THRESHOLD)
+    aqi_rise = calc_trend(TREND_AQI_FILE, aqi, AQI_DELTA_THRESHOLD)
 
     signals = {
         "wind": wind,
-        "pressure_low": pressure_low,
+        "pressure": pressure_low,
         "humidity": humidity,
-        "aqi_high": aqi_high
+        "aqi": aqi_high
     }
 
     last = read_json(SIGNAL_STATE_FILE, {k:False for k in signals})
@@ -98,27 +95,33 @@ def check_all():
     msg = None
     now = time.time()
 
+    # ======================
     # 单项
+    # ======================
     if not last["humidity"] and humidity:
-        msg = "🚨EnvAlert🚨\n✴️湿度过高\n⛔️关闭新风▶️开除湿机"
+        msg = "🚨EnvAlert🚨\n✴️湿度🫧过高😶‍🌫️\n⛔️关闭新风▶️开除湿机"
 
-    elif not last["pressure_low"] and pressure_low:
+    elif not last["pressure"] and pressure_low:
         msg = f"🚨气压过低 {p}"
 
     elif not last["wind"] and wind:
         msg = "🚨东北风触发"
 
-    elif not last["aqi_high"] and aqi_high:
+    elif not last["aqi"] and aqi_high:
         msg = f"🚨高污染 AQI:{aqi}"
 
-    # 趋势
+    # ======================
+    # 趋势（保留）
+    # ======================
     elif aqi_rise:
         msg = f"⚠️AQI快速上升 {aqi}"
 
     elif pressure_drop and wind:
         msg = "⚠️气压下降+东北风"
 
-    # 分级
+    # ======================
+    # 分级预警（覆盖单项）
+    # ======================
     if count == 2:
         msg = "🟡1️⃣级气象预警🚨"
     elif count == 3:
@@ -126,7 +129,9 @@ def check_all():
     elif count >= 4:
         msg = "🔴3️⃣级气象预警🚨"
 
-    # 恢复
+    # ======================
+    # 全局恢复（12h）
+    # ======================
     if count == 0 and any(last.values()):
         last_r = read_json(RECOVERY_FILE, {"t":0})["t"]
         if now - last_r > 43200:

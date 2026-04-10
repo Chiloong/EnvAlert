@@ -41,3 +41,9 @@ RUN_STATE_FILE = "run_state.json"
 TREND_PRESSURE_FILE = "pressure_trend.json"
 TREND_AQI_FILE = "aqi_trend.json"
 CACHE_FILE = "cache.json"
+
+# ======================
+# ⏰ 心跳提醒间隔（新增）
+# ======================
+REMIND_INTERVAL = 3600  # 1小时
+REMIND_STATE_FILE = "remind_state.json"

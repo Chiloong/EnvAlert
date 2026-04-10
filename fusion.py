@@ -12,23 +12,22 @@ QWEATHER_KEY = os.environ.get("QWEATHER_KEY")
 WAQI_TOKEN = os.environ.get("WAQI_TOKEN")
 
 
+# ========================
+# 🌍 数据获取
+# ========================
 def fetch_all():
     print("🌍 开始获取数据...")
 
-    weather_url = f"{QWEATHER_API}?location={LON},{LAT}&key={QWEATHER_KEY}"
-    print("🔑 KEY:", "***" if QWEATHER_KEY else None)
-    print("🌐 URL:", weather_url)
+    url = f"{QWEATHER_API}?location={LON},{LAT}&key={QWEATHER_KEY}"
 
     try:
-        weather = requests.get(weather_url, timeout=10).json()
+        weather = requests.get(url, timeout=10).json()
     except Exception as e:
-        print("❌ QWeather请求失败:", e)
+        print("❌ QWeather失败:", e)
         return None
 
-    print("📦 QWeather返回:", weather)
-
     if not weather or weather.get("code") != "200" or "now" not in weather:
-        print("❌ QWeather数据异常")
+        print("❌ QWeather异常")
         return None
 
     now = weather["now"]
@@ -39,17 +38,15 @@ def fetch_all():
     wind_dir = now.get("windDir", "")
     wind_scale = now.get("windScale", "")
 
+    # AQI
     aqi = 0
     try:
         waqi_url = WAQI_API.format(lat=LAT, lon=LON, token=WAQI_TOKEN)
         waqi = requests.get(waqi_url, timeout=10).json()
-
-        print("📦 WAQI返回:", waqi)
-
         if waqi.get("status") == "ok":
             aqi = waqi["data"]["aqi"]
-    except Exception as e:
-        print("⚠️ WAQI请求失败:", e)
+    except:
+        pass
 
     return {
         "pressure": pressure,
@@ -61,6 +58,9 @@ def fetch_all():
     }
 
 
+# ========================
+# 💾 状态
+# ========================
 STATE_FILE = "state.json"
 
 
@@ -78,14 +78,19 @@ def save_state(data):
     history = load_state()
     history.append(data)
     history = history[-72:]
-
     with open(STATE_FILE, "w") as f:
         json.dump(history, f)
 
 
+# ========================
+# 🧠 ①②③增强核心
+# ========================
 def calc_trend(history):
-    if len(history) < 5:
-        return "📈12h趋势: 数据积累中"
+    n = len(history)
+
+    # 🧠 ① 冷启动提示
+    if n < 5:
+        return f"📈趋势: 正在建立基线（{n}/5）"
 
     pressures = [x.get("pressure", 0) for x in history]
     aqis = [x.get("aqi", 0) for x in history]
@@ -93,34 +98,66 @@ def calc_trend(history):
     dp = pressures[-1] - pressures[0]
     daqi = aqis[-1] - aqis[0]
 
+    # 🧠 ② 轻预测
+    if abs(dp) < 1:
+        p_trend = "气压稳定"
+    elif dp > 0:
+        p_trend = "气压上升"
+    else:
+        p_trend = "气压下降"
+
+    if daqi > 5:
+        a_trend = "AQI上升"
+    elif daqi < -5:
+        a_trend = "AQI下降"
+    else:
+        a_trend = "AQI稳定"
+
+    # 🧠 ③ 人体影响模型（轻规则）
+    impact = []
+
+    if dp < -3:
+        impact.append("可能疲劳")
+    if daqi > 10:
+        impact.append("空气质量压力")
+    if float(history[-1].get("wind_speed", 0)) > 15:
+        impact.append("风压刺激")
+
+    impact_text = " / ".join(impact) if impact else "状态稳定"
+
     return (
         "📈12h趋势\n"
-        f"气压变化:{dp:+.1f} hPa\n"
-        f"AQI变化:{daqi:+.0f}"
+        f"{p_trend} ({dp:+.1f})\n"
+        f"{a_trend} ({daqi:+.0f})\n"
+        f"⚠️影响: {impact_text}"
     )
 
 
+# ========================
+# 📲 Bark
+# ========================
 def send_bark(msg):
-    BARK_KEY = os.environ.get("BARK_KEY")
-    if not BARK_KEY:
+    key = os.environ.get("BARK_KEY")
+    if not key:
         print("❌ 没有BARK_KEY")
         return
 
-    # ❗关键修复：不做任何编码处理
-    url = f"https://api.day.app/{BARK_KEY}/{msg}"
+    url = f"https://api.day.app/{key}/{msg}"
 
     try:
         requests.get(url, timeout=10)
         print("📲 已推送")
     except Exception as e:
-        print("❌ 推送失败:", e)
+        print("❌ Bark失败:", e)
 
 
+# ========================
+# 🚀 主流程
+# ========================
 def check_all():
     data = fetch_all()
-
     if not data:
-        print("❌ 数据获取失败，终止")
+        print("❌ 失败")
         return
 
     save_state(data)
@@ -138,6 +175,6 @@ def check_all():
         trend
     ])
 
-    print("📨 推送内容:\n", msg)
+    print("📨\n", msg)
 
     send_bark(msg)

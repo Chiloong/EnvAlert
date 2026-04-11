@@ -1,3 +1,5 @@
+print("=== RUNNING ===")
+
 from core.sensor import fetch_all
 from core.engine import detect
 from core.state import (
@@ -16,6 +18,7 @@ def log(msg):
 
 
 def main():
+
     log("🚀 start")
 
     data = fetch_all()
@@ -38,6 +41,7 @@ def main():
 
     json.dump(data, open("storage/state.json", "w"))
 
+    # ===== 心跳 =====
     if heartbeat_due(HEARTBEAT_INTERVAL):
         send(format_heartbeat(data, dp_level, risk))
 
@@ -52,3 +56,7 @@ def main():
         if can_trigger_combo(events):
             send(format_event(events, data, dp_level, risk))
             log(f"combo_event={events}")
+
+
+if __name__ == "__main__":
+    main()

@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 🔥关键修复：确保拿到最新storage状态
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -35,16 +37,14 @@ jobs:
       - name: Run main.py
         run: python main.py
 
-      # 🔥只持久化新系统状态（关键优化）
+      # 🔥状态持久化（只存新系统）
       - name: Commit state
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@github.com"
 
-          # ✅ 只提交 storage（避免旧系统干扰）
           git add storage/ || true
 
-          # ✅ 无变化不提交（防止报错）
           git diff --cached --quiet || git commit -m "update env state"
 
           git push || echo "no changes"

@@ -66,4 +66,3 @@ def format_heartbeat(data, dp_level, risk):
         f"气压:{data['pressure']} 湿度:{data['humidity']}% 风:{data['wind_dir']} AQI:{data['aqi']}",
         f"📉{dp_level} 风险:{risk}{color}"
     ])
-    

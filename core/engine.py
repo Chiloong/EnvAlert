@@ -14,15 +14,15 @@ def detect(data, prev):
     if data["pressure"] < PRESSURE_LOW:
         events.append("pressure_low")
 
-    # 😷AQI高
+    # 🌫️AQI
     if data["aqi"] > AQI_HIGH:
         events.append("aqi_high")
 
-    # 🌫️湿度高
+    # 🫧湿度
     if data["humidity"] > HUMIDITY_HIGH:
         events.append("humidity_high")
 
-    # 📉ΔP
+    # 📉气压变化
     if prev:
         dp = data["pressure"] - prev["pressure"]
         dp_abs = abs(dp)
@@ -39,18 +39,16 @@ def detect(data, prev):
     else:
         dp_level = "🟢弱波动"
 
-    # 🧠风险评分
-    risk = 0
-
-    weight = {
+    # 🧠风险
+    risk_map = {
+        "wind_ne": 20,
         "pressure_low": 30,
         "aqi_high": 30,
         "humidity_high": 20,
-        "wind_ne": 20,
         "pressure_change": 20,
     }
 
-    for e in events:
-        risk += weight.get(e, 0)
+    risk = sum([risk_map.get(e, 0) for e in events])
+    risk = min(risk, 100)
 
-    return events, dp_level, min(risk, 100)
+    return events, dp_level, risk

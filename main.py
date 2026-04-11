@@ -1,6 +1,10 @@
 from core.sensor import fetch_all
 from core.engine import detect
-from core.state import can_trigger, heartbeat_due
+from core.state import (
+    can_trigger_event,
+    can_trigger_combo,
+    heartbeat_due
+)
 from core.formatter import format_event, format_heartbeat
 from core.notifier import send
 from config import HEARTBEAT_INTERVAL
@@ -30,7 +34,6 @@ def main():
         except:
             prev = None
 
-    # 🔥更新：新增 risk 返回
     events, dp_level, risk = detect(data, prev)
 
     json.dump(data, open("storage/state.json", "w"))
@@ -40,19 +43,21 @@ def main():
         msg = format_heartbeat(data, dp_level, risk)
         log("heartbeat")
         send(msg)
-        return
 
-    # 🚨事件
-    if events:
-        if can_trigger(str(events)):
-            msg = format_event(events, data, dp_level, risk)
-            log(f"event={events}")
+    # =========================
+    # 🔥单事件推送（独立）
+    # =========================
+    for e in events:
+        if can_trigger_event(e):
+            msg = format_event([e], data, dp_level, risk)
+            log(f"single_event={e}")
             send(msg)
-        else:
-            log("cooldown")
-    else:
-        log("no event")
 
-
-if __name__ == "__main__":
-    main()
+    # =========================
+    # 🔥组合事件推送
+    # =========================
+    if len(events) >= 2:
+        if can_trigger_combo(events):
+            msg = format_event(events, data, dp_level, risk)
+            log(f"combo_event={events}")
+            send(msg)

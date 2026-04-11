@@ -1,81 +1,84 @@
-def get_risk_color(risk):
-    if risk < 30:
-        return "🟢"
-    elif risk < 60:
-        return "🟡"
-    elif risk < 80:
-        return "🟠"
-    else:
-        return "🔴"
+print("=== RUNNING ===")
 
-def map_event(e):
-    mapping = {
-        "wind_ne":         "💨东北风",
-        "pressure_low":    "🌨️气压低",
-        "aqi_high":        "🌫️高污染",
-        "humidity_high":   "🫧高湿度",
-        "pressure_change": "〽️气压降",
-    }
-    return mapping.get(e, "")
+from core.sensor    import fetch_all
+from core.engine    import detect
+from core.state     import can_trigger, mark_triggered, clear_event, heartbeat_due
+from core.formatter import format_event, format_combo, format_heartbeat
+from core.notifier  import send
+from config         import HEARTBEAT_INTERVAL, EVENT_COOLDOWN
 
-def format_event(event, data, dp_level, risk):
-    """单事件独立格式"""
+import json, os, tempfile
 
-    if event == "wind_ne":
-        return "\n".join([
-            "🚨EnvAlert🚨",
-            f"🏭发电厂↙️东北风{data['wind_scale']}级💨触发",
-            "⛔️关闭新风🟣颗粒过滤开大⬆️"
-        ])
+def log(msg):
+    print(f"[EnvAlert] {msg}")
 
-    if event == "pressure_low":
-        return "\n".join([
-            "🚨EnvAlert🚨",
-            f"✴️气压🌨️过低🥱{data['pressure']}hPa"
-        ])
+def load_prev():
+    path = "storage/state.json"
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except:
+        return None
 
-    if event == "pressure_change":
-        return f"✴️气压〽️骤变😣ΔP{dp_level}"
+def save_state(data):
+    os.makedirs("storage", exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", dir="storage", delete=False, suffix=".tmp") as f:
+        json.dump(data, f)
+        tmp = f.name
+    os.replace(tmp, "storage/state.json")
 
-    if event == "aqi_high":
-        return "\n".join([
-            "🚨EnvAlert🚨",
-            f"🟥高污染🌫️AQI{data['aqi']}😷"
-        ])
+def main():
+    log("🚀 start")
 
-    if event == "humidity_high":
-        return "\n".join([
-            "🚨EnvAlert🚨",
-            f"✴️湿度{data['humidity']}%😶‍🌫️过高💦",
-            "⛔️关闭新风▶️开除湿机"
-        ])
+    data = fetch_all()
+    log(f"data={data}")
+    if not data:
+        log("ERROR: empty data")
+        return
 
-    return ""
+    prev = load_prev()
+    events, dp_level, risk = detect(data, prev)
+    log(f"events={events} dp_level={dp_level} risk={risk}")
 
-def format_combo(events, data, dp_level, risk):
-    """多事件组合推送"""
-    color = get_risk_color(risk)
+    save_state(data)
 
-    if len(events) >= 4:
-        level = "🔴3️⃣级气象预警🚨"
-    elif len(events) == 3:
-        level = "🟠2️⃣级气象预警🚨"
-    else:
-        level = "🟡1️⃣级气象预警🚨"
+    # =========================
+    # 🌙 心跳
+    # =========================
+    if heartbeat_due(HEARTBEAT_INTERVAL):
+        msg = format_heartbeat(data, dp_level, risk)
+        log("heartbeat")
+        send(msg)
 
-    event_text = "".join(map_event(e) for e in events)
+    # =========================
+    # 🔥 单事件独立推送
+    # =========================
+    for e in events:
+        key = "single:" + e
+        if can_trigger(key, EVENT_COOLDOWN):
+            msg = format_event(e, data, dp_level, risk)
+            log(f"single_event={e}")
+            if send(msg):
+                mark_triggered(key)
 
-    return "\n".join([
-        level,
-        f"📉{dp_level}",
-        f"🧠风险{color}{risk}/100",
-        f"🌏异常：{event_text}"
-    ])
+    # 事件恢复后清除冷却状态
+    all_keys = ["wind_ne", "pressure_low", "aqi_high", "humidity_high", "pressure_change"]
+    for e in all_keys:
+        if e not in events:
+            clear_event("single:" + e)
 
-def format_heartbeat(data, dp_level, risk):
-    color = get_risk_color(risk)
-    return "\n".join([
-        "🌏EnvAlert 定时播报",
-        f"气压:{data['pressure']} 湿度:{data['humidity']}% 风:{data['wind_dir']} AQI:{data['aqi']}",
-        f"📉{dp_level} 风险:{risk}{color}"
-    ])
+    # =========================
+    # 🔥 组合事件推送
+    # =========================
+    if len(events) >= 2:
+        combo_key = "combo:" + ",".join(sorted(events))
+        if can_trigger(combo_key, EVENT_COOLDOWN):
+            msg = format_combo(events, data, dp_level, risk)
+            log(f"combo_event={events}")
+            if send(msg):
+                mark_triggered(combo_key)
+
+if __name__ == "__main__":
+    main()

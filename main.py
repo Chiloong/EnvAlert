@@ -36,6 +36,7 @@ def main():
             prev = None
 
     events, dp_level, risk = detect(data, prev)
+    print("events =", events)
 
     json.dump(data, open("storage/state.json", "w"))
 

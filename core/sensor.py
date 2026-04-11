@@ -25,6 +25,7 @@ def fetch_all():
         "pressure": float(now.get("pressure", 0)),
         "humidity": float(now.get("humidity", 0)),
         "wind_dir": now.get("windDir", ""),
+        "wind_angle": float(now.get("wind360", 0)),
         "wind_scale": now.get("windScale", ""),
         "wind_speed": float(now.get("windSpeed", 0)),
         "aqi": a.get("data", {}).get("aqi", 0) if isinstance(a, dict) else 0

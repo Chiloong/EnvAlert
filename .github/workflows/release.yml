@@ -26,7 +26,8 @@ jobs:
         run: |
           mkdir -p dist
           cp -r *.py dist/ || true
-          cp -r state dist/ || true
+          cp -r core dist/ || true
+          cp -r storage dist/ || true   # 🔥修复点
           cp README.md dist/ || true
           tar -czf envalert-${VERSION}.tar.gz dist
 
@@ -39,9 +40,10 @@ jobs:
             🚀 EnvAlert Release ${{ env.VERSION }}
 
             ## 内容说明
-            - 自动打包 main.py
-            - 包含 state 状态数据
-            - 当前运行系统快照
+            - 事件驱动系统
+            - Bark稳定推送（POST）
+            - storage状态持久化
+            - 当前运行系统完整快照
           files: envalert-${{ env.VERSION }}.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

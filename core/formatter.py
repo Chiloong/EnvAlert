@@ -21,25 +21,25 @@ def map_event(e):
 def format_event(event, data, dp_level, risk):
     if event == "wind_ne":
         return "\n".join([
-            "🚨EnvAlert🚨",
+            "🚨电厂空污SO₂NO₂🚨",
             f"🏭发电厂↙️东北风{data['wind_scale']}级💨触发",
             "⛔️关闭新风🟣颗粒过滤开大⬆️"
         ])
     if event == "pressure_low":
         return "\n".join([
-            "🚨EnvAlert🚨",
+            "🚨低气压失稳🚨",
             f"✴️气压🌨️过低🥱{data['pressure']}hPa"
         ])
     if event == "pressure_change":
         return f"✴️气压〽️骤变😣ΔP{dp_level}"
     if event == "aqi_high":
         return "\n".join([
-            "🚨EnvAlert🚨",
-            f"🟥高污染🌫️AQI{data['aqi']}😷"
+            "🚨空气重度污染🚨",
+            f"🌀开大🌪️净化器🌫️AQI{data['aqi']}😷"
         ])
     if event == "humidity_high":
         return "\n".join([
-            "🚨EnvAlert🚨",
+            "🚨开始憋闷🚨",
             f"✴️湿度{data['humidity']}%😶‍🌫️过高💦",
             "⛔️关闭新风▶️开除湿机"
         ])

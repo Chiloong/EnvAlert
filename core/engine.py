@@ -8,7 +8,7 @@ def detect(data, prev):
 
     # 🌬️东北风（20°~70°，收窄避免把纯东风算入）
     angle = data.get("wind_angle", 0)
-    if 20 <= angle <= 70:
+    if 18 <= angle <= 78:
         events.append("wind_ne")
 
     # 🌨️气压低

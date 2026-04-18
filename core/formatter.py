@@ -64,7 +64,7 @@ def format_combo(events, data, dp_level, risk):
 def format_heartbeat(data, dp_level, risk):
     color = get_risk_color(risk)
     return "\n".join([
-        "🌏EnvAlert 定时播报",
+        "🌏EnvAlert🙂气象安稳✅",
         f"气压:{data['pressure']} 湿度:{data['humidity']}% 风:{data['wind_dir']} AQI:{data['aqi']}",
         f"📉{dp_level} 风险:{risk}{color}"
     ])

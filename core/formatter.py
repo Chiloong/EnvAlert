@@ -21,14 +21,14 @@ def map_event(e):
 def format_event(event, data, dp_level, risk):
     if event == "wind_ne":
         return "\n".join([
-            "↙️东北风{data['wind_scale']}级💨",
-            f"注意⚠️发电厂🏭有害气体🌋SO₂NO₂",
+            "注意⚠️发电厂🏭有害气体🌋SO₂NO",
+            f"↙️东北风{data['wind_scale']}级💨",
             "⛔️关闭新风🟣颗粒过滤开大⬆️"
         ])
     if event == "pressure_low":
         return "\n".join([
             "🚨低气压失稳🚨",
-            f"✴️气压🌨️过低🥱{data['pressure']}hPa"
+            f"✴️{data['pressure']}hPa🥱气压过低🌨️"
         ])
     if event == "pressure_change":
         return f"✴️气压〽️骤变😣ΔP{dp_level}"
